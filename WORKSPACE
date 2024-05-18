@@ -168,6 +168,12 @@ new_local_repository(
     path = "third_party/opentelemetry-cpp",
 )
 
+new_local_repository(
+    name = "cpp-httplib",
+    build_file = "//third_party:cpp-httplib.BUILD",
+    path = "third_party/cpp-httplib",
+)
+
 new_patched_local_repository(
     name = "tbb",
     build_file = "//third_party:tbb.BUILD",
