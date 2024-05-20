@@ -45,7 +45,8 @@ def zip_and_upload_artifacts() -> None:
 
 
 def trigger_upload_test_stats_intermediate_workflow() -> None:
-    requests.post(
+    print("Triggering upload_test_stats_intermediate workflow")
+    x = requests.post(
         "https://api.github.com/repos/pytorch/pytorch/actions/workflows/upload_test_stats_intermediate.yml/dispatches",
         headers={
             "Accept": "application/vnd.github.v3+json",
@@ -59,3 +60,4 @@ def trigger_upload_test_stats_intermediate_workflow() -> None:
             },
         },
     )
+    print(x.text)
