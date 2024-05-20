@@ -52,7 +52,7 @@ def trigger_upload_test_stats_intermediate_workflow() -> None:
             "Authorization": f"Bearer {os.environ.get('GITHUB_TOKEN')}",
         },
         json={
-            "ref": "csl/upload_artifacts_during_run",
+            "ref": "main",
             "inputs": {
                 "workflow_run_id": os.environ.get("GITHUB_RUN_ID"),
                 "workflow_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),

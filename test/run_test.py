@@ -1599,6 +1599,7 @@ def run_tests(
             return False
         if IS_CI and options.upload_artifacts_while_running:
             zip_and_upload_artifacts()
+            print("hello")
             trigger_upload_test_stats_intermediate_workflow()
 
         failures.append(failure)
