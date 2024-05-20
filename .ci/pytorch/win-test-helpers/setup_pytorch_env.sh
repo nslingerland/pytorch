@@ -28,6 +28,7 @@ else
 fi
 chmod +x temp.bat
 ./temp.bat
+# shellcheck disable=SC1091
 source env.sh
 rm temp.bat env.sh
 
