@@ -2,7 +2,7 @@ from typing import List
 
 import torch
 import torch.utils._pytree as pytree
-from . import ir
+from . import mkldnn_ir
 from .ir import TensorBox
 from .lowering import add, add_needs_realized_inputs, aten, register_lowering, to_dtype
 
@@ -32,7 +32,7 @@ def register_onednn_fusion_ops():
             algorithm,
         ):
             return TensorBox.create(
-                ir.ConvolutionUnary.create(
+                mkldnn_ir.ConvolutionUnary.create(
                     x,
                     weight,
                     bias,
@@ -63,7 +63,7 @@ def register_onednn_fusion_ops():
             unary_algorithm,
         ):
             return TensorBox.create(
-                ir.ConvolutionBinary.create(
+                mkldnn_ir.ConvolutionBinary.create(
                     x,
                     other,
                     weight,
@@ -97,7 +97,7 @@ def register_onednn_fusion_ops():
             unary_algorithm,
         ):
             return TensorBox.create(
-                ir.ConvolutionBinaryInplace.create(
+                mkldnn_ir.ConvolutionBinaryInplace.create(
                     x,
                     other,
                     weight,
@@ -119,12 +119,12 @@ def register_onednn_fusion_ops():
             x: TensorBox, w: TensorBox, b: TensorBox, attr, scalars, algorithm
         ):
             return TensorBox.create(
-                ir.LinearUnary.create(x, w, b, attr, scalars, algorithm)
+                mkldnn_ir.LinearUnary.create(x, w, b, attr, scalars, algorithm)
             )
 
         @register_lowering(torch.ops.mkldnn._linear_pointwise.binary)
         def linear_binary(x: TensorBox, y: TensorBox, w: TensorBox, b: TensorBox, attr):
-            return TensorBox.create(ir.LinearBinary.create(x, y, w, b, attr))
+            return TensorBox.create(mkldnn_ir.LinearBinary.create(x, y, w, b, attr))
 
         @register_lowering(torch.ops.mkldnn._convolution_transpose_pointwise)
         def convolution_transpose_unary(
@@ -141,7 +141,7 @@ def register_onednn_fusion_ops():
             algorithm,
         ):
             return TensorBox.create(
-                ir.ConvolutionTransposeUnary.create(
+                mkldnn_ir.ConvolutionTransposeUnary.create(
                     x,
                     weight,
                     bias,
@@ -177,7 +177,7 @@ def register_onednn_fusion_ops():
         ):
             return pytree.tree_map(
                 TensorBox.create,
-                ir.MkldnnRnnLayer.create(
+                mkldnn_ir.MkldnnRnnLayer.create(
                     x,
                     w0,
                     w1,
@@ -218,7 +218,7 @@ def register_onednn_fusion_ops():
             algorithm,
         ):
             return TensorBox.create(
-                ir.QConvPointWisePT2E.create(
+                mkldnn_ir.QConvPointWisePT2E.create(
                     x,
                     x_scale,
                     x_zp,
@@ -278,7 +278,7 @@ def register_onednn_fusion_ops():
                 # we will do accum dtype convertion here.
                 accum = to_dtype(accum, output_dtype)
             return TensorBox.create(
-                ir.QConvPointWiseBinaryPT2E.create(
+                mkldnn_ir.QConvPointWiseBinaryPT2E.create(
                     x,
                     x_scale,
                     x_zp,
@@ -321,7 +321,7 @@ def register_onednn_fusion_ops():
             algorithm,
         ):
             return TensorBox.create(
-                ir.QLinearPointwisePT2E.create(
+                mkldnn_ir.QLinearPointwisePT2E.create(
                     x,
                     x_scale,
                     x_zp,
@@ -380,7 +380,7 @@ def register_onednn_fusion_ops():
                         x2.get_dtype() == output_dtype
                     ), "dtype of accum for qlinear post op sum should be the same as output"
             return TensorBox.create(
-                ir.QLinearPointwiseBinaryPT2E.create(
+                mkldnn_ir.QLinearPointwiseBinaryPT2E.create(
                     x,
                     x_scale,
                     x_zp,
@@ -414,7 +414,7 @@ def register_onednn_fusion_ops():
                 batch_size,
             ):
                 result = TensorBox.create(
-                    ir.MKLPackedLinear.create(x, packed_w, orig_w, batch_size)
+                    mkldnn_ir.MKLPackedLinear.create(x, packed_w, orig_w, batch_size)
                 )
                 if b is not None:
                     result = add(result, b)
