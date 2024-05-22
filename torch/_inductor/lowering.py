@@ -2780,10 +2780,16 @@ def gather(x, dim, index, sparse_grad=False):
     # sparse_grad doesn't affect forward computation,
     # and backward tracing is taken care of by AOT Autograd
     assert isinstance(x, TensorBox)
-    assert index.get_dtype() == torch.int64
+    if index.get_numel() != 0:
+        assert index.get_dtype() == torch.int64
+
     size = x.get_size()
     offset = len(size) == 0
     dim = _validate_dim(x, dim, offset)
+
+    if offset:
+        x = expand(x, index.get_size())
+        size = x.get_size()
 
     x_loader = x.make_loader()
     index_loader = index.make_loader()
