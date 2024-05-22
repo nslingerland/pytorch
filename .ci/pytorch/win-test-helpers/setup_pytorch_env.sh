@@ -41,7 +41,7 @@ if [[ "${USE_CUDA}" == "1" ]]; then
     export CUDA_PATH="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v$CUDA_VERSION"
 
     # version transformer, for example 10.1 to 10_1.
-    export VERSION_SUFFIX=${CUDA_VERSION// /.}
+    export VERSION_SUFFIX=${CUDA_VERSION//./_}
 
     declare "CUDA_PATH_V$VERSION_SUFFIX=$CUDA_PATH"
 
