@@ -1,5 +1,6 @@
 from warnings import warn
 import inspect
+from typing_extensions import deprecated  # Python 3.13+
 from .conflict import ordering, ambiguities, super_signature, AmbiguityWarning
 from .utils import expand_tuples
 from .variadic import Variadic, isvariadic
@@ -27,24 +28,19 @@ def ambiguity_warn(dispatcher, ambiguities):
     warn(warning_text(dispatcher.name, ambiguities), AmbiguityWarning)
 
 
+@deprecated('`halt_ordering` is deprecated, you can safely remove this call.')
 def halt_ordering():
     """Deprecated interface to temporarily disable ordering.
     """
-    warn(
-        'halt_ordering is deprecated, you can safely remove this call.',
-        DeprecationWarning,
-    )
 
 
+@deprecated(
+    '`restart_ordering` is deprecated, if you would like to eagerly order the dispatchers, '
+    'you should call the `reorder()` method on each dispatcher.',
+)
 def restart_ordering(on_ambiguity=ambiguity_warn):
     """Deprecated interface to temporarily resume ordering.
     """
-    warn(
-        'restart_ordering is deprecated, if you would like to eagerly order'
-        'the dispatchers, you should call the ``reorder()`` method on each'
-        ' dispatcher.',
-        DeprecationWarning,
-    )
 
 
 def variadic_signature_matches_iter(types, full_signature):
@@ -316,14 +312,12 @@ class Dispatcher:
                     result = self.funcs[signature]
                     yield result
 
+    @deprecated("`resolve()` is deprecated, use `dispatch(*types)`")
     def resolve(self, types):
         """ Determine appropriate implementation for this type signature
         .. deprecated:: 0.4.4
             Use ``dispatch(*types)`` instead
         """
-        warn("resolve() is deprecated, use dispatch(*types)",
-             DeprecationWarning)
-
         return self.dispatch(*types)
 
     def __getstate__(self):

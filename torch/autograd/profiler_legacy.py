@@ -1,6 +1,8 @@
 import itertools
 from warnings import warn
 
+from typing_extensions import deprecated  # Python 3.13+
+
 import torch
 import torch.cuda
 
@@ -23,6 +25,10 @@ from torch.autograd.profiler_util import (
 __all__ = ["profile"]
 
 
+@deprecated(
+    "`torch.autograd.profiler_legacy.profile` is deprecated and will be removed in a future release. "
+    "Please use `torch.profiler` instead.",
+)
 class profile:
     """DEPRECATED: use torch.profiler instead."""
 

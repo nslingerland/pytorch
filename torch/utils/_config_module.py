@@ -7,10 +7,11 @@ import io
 import pickle
 import tokenize
 import unittest
-import warnings
 from types import FunctionType, ModuleType
 from typing import Any, Dict, Optional, Set, Union
 from unittest import mock
+
+from typing_extensions import deprecated  # Python 3.13+
 
 # Types saved/loaded in configs
 CONFIG_TYPES = (int, float, bool, type(None), str, list, set, tuple, dict)
@@ -183,12 +184,11 @@ class ConfigModule(ModuleType):
             self._is_dirty = False
         return self._hash_digest
 
+    @deprecated(
+        "config.to_dict() has been deprecated. It may no longer change the underlying config."
+        " use config.shallow_copy_dict() or config.get_config_copy() instead",
+    )
     def to_dict(self) -> Dict[str, Any]:
-        warnings.warn(
-            "config.to_dict() has been deprecated. It may no longer change the underlying config."
-            " use config.shallow_copy_dict() or config.get_config_copy() instead",
-            DeprecationWarning,
-        )
         return self.shallow_copy_dict()
 
     def shallow_copy_dict(self) -> Dict[str, Any]:

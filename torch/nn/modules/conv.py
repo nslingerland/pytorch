@@ -1,5 +1,4 @@
 import math
-import warnings
 
 import torch
 from torch import Tensor
@@ -13,6 +12,7 @@ from torch._torch_docs import reproducibility_notes
 
 from ..common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple, Union
+from typing_extensions import deprecated  # Python 3.13+
 
 __all__ = ['Conv1d', 'Conv2d', 'Conv3d', 'ConvTranspose1d', 'ConvTranspose2d', 'ConvTranspose3d',
            'LazyConv1d', 'LazyConv2d', 'LazyConv3d', 'LazyConvTranspose1d', 'LazyConvTranspose2d',
@@ -1121,10 +1121,11 @@ class ConvTranspose3d(_ConvTransposeNd):
 # `_ConvTransposeNd` is really not a mixin anymore (but multiple inheritance as
 # above would still work).
 class _ConvTransposeMixin(_ConvTransposeNd):
+    @deprecated(
+        "`_ConvTransposeMixin` is a deprecated internal class. "
+        "Please consider using public APIs.",
+    )
     def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "_ConvTransposeMixin is a deprecated internal class. "
-            "Please consider using public APIs.")
         super().__init__(*args, **kwargs)
 
 

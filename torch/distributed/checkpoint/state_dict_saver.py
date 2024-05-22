@@ -4,6 +4,8 @@ import warnings
 from concurrent.futures import Future, ThreadPoolExecutor
 from typing import cast, Optional, Union
 
+from typing_extensions import deprecated  # Python 3.13+
+
 import torch
 import torch.distributed as dist
 from torch.distributed._state_dict_utils import _offload_state_dict_to_cpu
@@ -24,6 +26,10 @@ from .utils import _api_bc_check, _DistWrapper, _profile
 __all__ = ["save_state_dict", "save", "async_save"]
 
 
+@deprecated(
+    "`save_state_dict` is deprecated and will be removed in future versions."
+    "Please use `save` instead.",
+)
 def save_state_dict(
     state_dict: STATE_DICT_TYPE,
     storage_writer: StorageWriter,
@@ -33,11 +39,6 @@ def save_state_dict(
     planner: Optional[SavePlanner] = None,
 ) -> Metadata:
     """This method is deprecated. Please switch to 'save'."""
-    warnings.warn(
-        "'save_state_dict' is deprecated and will be removed in future versions."
-        "Please use 'save' instead."
-    )
-
     storage_writer.reset()
 
     # TODO: test returning `save` here instead.

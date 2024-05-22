@@ -219,10 +219,16 @@ class Hardtanh(Module):
     ) -> None:
         super().__init__()
         if min_value is not None:
-            warnings.warn("keyword argument min_value is deprecated and rename to min_val")
+            warnings.warn(
+                "keyword argument `min_value` is deprecated and rename to `min_val`",
+                DeprecationWarning,
+            )
             min_val = min_value
         if max_value is not None:
-            warnings.warn("keyword argument max_value is deprecated and rename to max_val")
+            warnings.warn(
+                "keyword argument `max_value` is deprecated and rename to `max_val`",
+                DeprecationWarning,
+            )
             max_val = max_value
 
         self.min_val = min_val

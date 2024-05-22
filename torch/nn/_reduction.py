@@ -10,7 +10,10 @@ def get_enum(reduction: str) -> int:
     elif reduction == 'mean':
         ret = 1
     elif reduction == 'elementwise_mean':
-        warnings.warn("reduction='elementwise_mean' is deprecated, please use reduction='mean' instead.")
+        warnings.warn(
+            "reduction='elementwise_mean' is deprecated, please use reduction='mean' instead.",
+            DeprecationWarning,
+        )
         ret = 1
     elif reduction == 'sum':
         ret = 2

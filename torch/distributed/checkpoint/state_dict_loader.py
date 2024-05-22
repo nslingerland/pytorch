@@ -2,6 +2,8 @@ import os
 import warnings
 from typing import Any, cast, Dict, Optional, Set, Union
 
+from typing_extensions import deprecated  # Python 3.13+
+
 import torch
 import torch.distributed as dist
 from torch.distributed.checkpoint.default_planner import _EmptyStateDictLoadPlanner
@@ -17,6 +19,10 @@ from .utils import _all_gather_keys, _api_bc_check, _DistWrapper, _profile
 __all__ = ["load_state_dict", "load"]
 
 
+@deprecated(
+    "`load_state_dict` is deprecated and will be removed in future versions. "
+    "Please use `load` instead.",
+)
 def load_state_dict(
     state_dict: Dict[str, Any],
     storage_reader: StorageReader,
@@ -26,10 +32,6 @@ def load_state_dict(
     planner: Optional[LoadPlanner] = None,
 ) -> None:
     """This method is deprecated. Please switch to 'load'."""
-    warnings.warn(
-        "'load_state_dict' is deprecated and will be removed in future versions. "
-        "Please use 'load' instead."
-    )
     storage_reader.reset()
     with _profile():
         # TODO: test returning `load` here instead.

@@ -3,6 +3,8 @@
 import functools
 from typing import List
 
+from typing_extensions import deprecated  # Python 3.13+
+
 import torch
 import torch.utils._pytree as pytree
 
@@ -12,6 +14,9 @@ except ModuleNotFoundError:
     np = None  # type: ignore[assignment]
 
 
+@deprecated(
+    "`is_compiling` is deprecated. Use `torch.compiler.is_compiling()` instead."
+)
 def is_compiling() -> bool:
     """
     Indicates whether we are tracing/compiling with torch.compile() or torch.export().

@@ -2,6 +2,7 @@ import inspect
 import warnings
 
 from typing import Any, List, Optional, Set
+from typing_extensions import deprecated  # Python 3.13+
 
 import torch
 
@@ -116,11 +117,11 @@ def apply_shuffle_settings(datapipe: DataPipe, shuffle: Optional[bool] = None) -
     return datapipe
 
 
+@deprecated(
+    "`apply_shuffle_seed` is deprecated since 1.12 and will be removed in the future releases. "
+    "Please use `apply_random_seed` instead.",
+)
 def apply_shuffle_seed(datapipe: DataPipe, rng: Any) -> DataPipe:
-    warnings.warn(
-        "`apply_shuffle_seed` is deprecated since 1.12 and will be removed in the future releases."
-        "\nPlease use `apply_random_seed` instead."
-    )
     return apply_random_seed(datapipe, rng)
 
 

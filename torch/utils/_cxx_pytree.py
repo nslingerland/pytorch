@@ -15,7 +15,6 @@ collection support for PyTorch APIs.
 import functools
 import sys
 import types
-import warnings
 from typing import (
     Any,
     Callable,
@@ -28,6 +27,8 @@ from typing import (
     TypeVar,
     Union,
 )
+
+from typing_extensions import deprecated  # Python 3.13+
 
 import torch
 
@@ -167,6 +168,10 @@ def register_pytree_node(
     )
 
 
+@deprecated(
+    "`torch.utils._cxx_pytree._register_pytree_node` is deprecated. "
+    "Please use `torch.utils._cxx_pytree.register_pytree_node` instead.",
+)
 def _register_pytree_node(
     cls: Type[Any],
     flatten_fn: FlattenFunc,
@@ -207,11 +212,6 @@ def _register_pytree_node(
             original context. This is used for json deserialization, which is being used in
             :mod:`torch.export` right now.
     """
-    warnings.warn(
-        "torch.utils._cxx_pytree._register_pytree_node is deprecated. "
-        "Please use torch.utils._cxx_pytree.register_pytree_node instead.",
-        stacklevel=2,
-    )
 
     _private_register_pytree_node(
         cls,

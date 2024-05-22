@@ -9,6 +9,8 @@ half, float, double and bfloat16) and complex :class:`Tensor` types (cfloat, cdo
 import warnings
 from typing import Any, Callable, cast, List, Optional, Sequence, Tuple, Union
 
+from typing_extensions import deprecated  # Python 3.13+
+
 import torch
 
 from torch.types import _size, _TensorOrTensors, _TensorOrTensorsOrGradEdge
@@ -252,17 +254,20 @@ def backward(
         )
 
     if grad_variables is not None:
-        warnings.warn("'grad_variables' is deprecated. Use 'grad_tensors' instead.")
+        warnings.warn(
+            "`grad_variables` is deprecated. Use `grad_tensors` instead.",
+            DeprecationWarning,
+        )
         if grad_tensors is None:
             grad_tensors = grad_variables
         else:
             raise RuntimeError(
-                "'grad_tensors' and 'grad_variables' (deprecated) "
-                "arguments both passed to backward(). Please only "
-                "use 'grad_tensors'."
+                "`grad_tensors` and `grad_variables` (deprecated) "
+                "arguments both passed to `backward()`. Please only "
+                "use `grad_tensors`."
             )
     if inputs is not None and len(inputs) == 0:
-        raise RuntimeError("'inputs' argument to backward() cannot be empty.")
+        raise RuntimeError("`inputs` argument to `backward()` cannot be empty.")
 
     tensors = (tensors,) if isinstance(tensors, torch.Tensor) else tuple(tensors)
     inputs = (
@@ -395,7 +400,8 @@ def grad(
         warnings.warn(
             "only_inputs argument is deprecated and is ignored now "
             "(defaults to True). To accumulate gradient for other "
-            "parts of the graph, please use torch.autograd.backward."
+            "parts of the graph, please use torch.autograd.backward.",
+            DeprecationWarning,
         )
 
     grad_outputs_ = _tensor_or_tensors_to_tuple(grad_outputs, len(t_outputs))
@@ -479,7 +485,7 @@ def variable(*args, **kwargs):
 # f"{fn.__module__}.{fn.__name__}(...). This yields torch.autograd.variable.Variable(...) in the
 # output of an FX graph.  Unfortunately the module name torch.autograd.variable is shadowed by the
 # deprecated function - variable(...).
-variable.Variable = Variable  # type: ignore[attr-defined]
+variable.Variable = deprecated("`torch.autograd.variable` is deprecated")(Variable)  # type: ignore[attr-defined]
 
 if not torch._C._autograd_init():
     raise RuntimeError("autograd initialization failed")
