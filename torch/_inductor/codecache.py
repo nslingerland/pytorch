@@ -1515,6 +1515,10 @@ def use_custom_generated_macros() -> str:
 
 def use_fb_internal_macros() -> str:
     if config.is_fbcode():
+        # TODO: this is to avoid FC breakage for fbcode. When using newly
+        # generated model.so on an older verion of PyTorch, need to use
+        # the v1 version for aoti_torch_create_tensor_from_blob
+        create_tensor_from_blob_v1 = "-D AOTI_USE_CREATE_TENSOR_FROM_BLOB_V1"
         openmp_lib = build_paths.openmp_lib()
         preprocessor_flags = " ".join(
             (
@@ -1523,7 +1527,7 @@ def use_fb_internal_macros() -> str:
                 "-D C10_DISABLE_TENSORIMPL_EXTENSIBILITY",
             )
         )
-        return f"-Wp,-fopenmp {openmp_lib} {preprocessor_flags}"
+        return f"-Wp,-fopenmp {openmp_lib} {preprocessor_flags} {create_tensor_from_blob_v1}"
     else:
         return ""
 
@@ -2069,7 +2073,9 @@ class AotCodeCompiler:
 
             output_o = os.path.splitext(input_path)[0] + ".o"
             consts_size = sum(
-                tensor.untyped_storage().nbytes()
+                torch.ops.mkldnn._nbytes(tensor)
+                if tensor.is_mkldnn
+                else tensor.untyped_storage().nbytes()
                 for (name, tensor) in graph.constants.items()
                 if name not in graph.folded_constants
             )
@@ -2101,6 +2107,13 @@ class AotCodeCompiler:
 
                 if t.numel() == 0:
                     return b""
+
+                if t.is_mkldnn:
+                    raw_array = ctypes.cast(
+                        torch.ops.mkldnn.data_ptr(t),
+                        ctypes.POINTER(ctypes.c_ubyte * torch.ops.mkldnn._nbytes(t)),
+                    )
+                    return bytes(raw_array.contents)
 
                 t_cpu = t.untyped_storage().cpu()
                 raw_array = ctypes.cast(
