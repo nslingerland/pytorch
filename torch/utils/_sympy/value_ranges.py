@@ -25,6 +25,9 @@ import torch
 
 from torch._prims_common import dtype_to_type
 from .functions import (
+    FloatTrueDiv,
+    FloorDiv,
+    IntTrueDiv,
     OpaqueUnaryFn_acos,
     OpaqueUnaryFn_asinh,
     OpaqueUnaryFn_atan,
@@ -36,6 +39,9 @@ from .functions import (
     OpaqueUnaryFn_tanh,
     Round,
     RoundDecimal,
+    ToFloat,
+    TruncToFloat,
+    TruncToInt,
 )
 from .interp import sympy_interp
 
@@ -120,6 +126,8 @@ class ValueRanges(Generic[_T]):
     lower: _T
     upper: _T
     is_bool: bool
+    is_int: bool
+    is_float: bool
 
     @overload
     def __init__(self: ValueRanges[sympy.Expr], lower: ExprIn, upper: ExprIn) -> None:
@@ -142,8 +150,17 @@ class ValueRanges(Generic[_T]):
         # Because this is a frozen class
         object.__setattr__(self, "lower", lower)
         object.__setattr__(self, "upper", upper)
+        # Unlike bool/int in Python, we don't report bools are ints
         object.__setattr__(self, "is_bool", isinstance(lower, SympyBoolean))
-        assert isinstance(upper, SympyBoolean) == self.is_bool
+        if self.is_bool:
+            assert isinstance(upper, SympyBoolean), (lower, upper)
+        object.__setattr__(
+            self, "is_int", not self.is_bool and isinstance(lower, sympy.Integer)
+        )
+        if self.is_int:
+            assert isinstance(upper, sympy.Integer), (lower, upper)
+        object.__setattr__(self, "is_float", not self.is_bool and not self.is_int)
+        assert self.is_bool or self.is_int or self.is_float, (lower, upper)
 
     def boolify(self) -> ValueRanges[SympyBoolean]:
         if vr_is_bool(self):
@@ -185,6 +202,8 @@ class ValueRanges(Generic[_T]):
         if self == ValueRanges.unknown():
             return other
         assert self.is_bool == other.is_bool, (self, other)
+        assert self.is_int == other.is_int, (self, other)
+        assert self.is_float == other.is_float, (self, other)
         if self.is_bool:
             return ValueRanges(
                 sympy.Or(self.lower, other.lower), sympy.And(self.upper, other.upper)
@@ -371,6 +390,14 @@ class SymPyValueRangeAnalysis:
         return ValueRanges.wrap(value)
 
     @staticmethod
+    def to_int(a):
+        return ValueRanges.increasing_map(a, TruncToInt)
+
+    @staticmethod
+    def to_float(a):
+        return ValueRanges.increasing_map(a, ToFloat)
+
+    @staticmethod
     def not_(a):
         a = ValueRanges.wrap(a)
         a = a.boolify()
@@ -449,9 +476,16 @@ class SymPyValueRangeAnalysis:
 
         return ValueRanges.coordinatewise_monotone_map(a, b, safe_mul)
 
-    @classmethod
-    def div(cls, a, b):
-        return cls.truediv(a, b)
+    @staticmethod
+    def int_truediv(a, b):
+        a = ValueRanges.wrap(a)
+        b = ValueRanges.wrap(b)
+        if 0 in b or (
+            (-sympy.oo in a or sympy.oo in a) and (-sympy.oo in b or sympy.oo in b)
+        ):
+            return ValueRanges.unknown()
+        else:
+            return ValueRanges.coordinatewise_monotone_map(a, b, IntTrueDiv)
 
     @staticmethod
     def truediv(a, b):
@@ -462,7 +496,7 @@ class SymPyValueRangeAnalysis:
         ):
             return ValueRanges.unknown()
         else:
-            return ValueRanges.coordinatewise_monotone_map(a, b, operator.truediv)
+            return ValueRanges.coordinatewise_monotone_map(a, b, FloatTrueDiv)
 
     @staticmethod
     def floordiv(a, b):
@@ -473,7 +507,7 @@ class SymPyValueRangeAnalysis:
         ):
             return ValueRanges.unknown()
         else:
-            return ValueRanges.coordinatewise_monotone_map(a, b, operator.floordiv)
+            return ValueRanges.coordinatewise_monotone_map(a, b, FloorDiv)
 
     @classmethod
     def mod(cls, x, y):
@@ -522,7 +556,7 @@ class SymPyValueRangeAnalysis:
 
     @classmethod
     def is_non_overlapping_and_dense_indicator(cls, *args):
-        return ValueRanges.unknown()
+        return ValueRanges.unknown()  # TODO: type here is wrong
 
     @classmethod
     def pow(cls, a, b):
@@ -614,21 +648,7 @@ class SymPyValueRangeAnalysis:
     def min_or_max(a, b, fn):
         a = ValueRanges.wrap(a)
         b = ValueRanges.wrap(b)
-
-        # Performs upcasting first
-        def fn_(x: sympy.Expr, y: sympy.Expr) -> sympy.Expr:
-            # Poorman's version of upcasting in Sympy
-            # Inf is not a float...
-            if x.is_Integer and y.is_Integer:
-                result_type = sympy.Integer
-            elif x.is_rational and y.is_rational:
-                result_type = sympy.Rational
-            else:
-                assert x.is_real or not x.is_finite or y.is_real or not y.is_finite
-                result_type = sympy.Float
-            return fn(result_type(x), result_type(y))
-
-        return ValueRanges.coordinatewise_increasing_map(a, b, fn_)
+        return ValueRanges.coordinatewise_increasing_map(a, b, fn)
 
     @classmethod
     def floor(cls, x):
@@ -752,10 +772,7 @@ class SymPyValueRangeAnalysis:
 
     @staticmethod
     def trunc(x):
-        def trunc(x):
-            return sympy.Integer(x) if x.is_finite else x
-
-        return ValueRanges.increasing_map(x, trunc)
+        return ValueRanges.increasing_map(x, TruncToFloat)
 
 
 class ValueRangeAnalysis(SymPyValueRangeAnalysis):
@@ -790,9 +807,10 @@ class ValueRangeAnalysis(SymPyValueRangeAnalysis):
     def reduction(self, name, dtype, src_dtype, reduction_type, index, value):
         return ValueRanges.unknown()
 
-    def index_expr(self, index, dtype):
+    @classmethod
+    def index_expr(cls, index, dtype):
         assert isinstance(index, ValueRanges)
-        return index
+        return cls.to_dtype(index, dtype)
 
     @staticmethod
     def to_dtype(x, dtype: torch.dtype, src_dtype: Optional[torch.dtype] = None):
@@ -835,6 +853,7 @@ class ValueRangeAnalysis(SymPyValueRangeAnalysis):
     def neg(x):
         return ValueRanges.decreasing_map(x, operator.neg)
 
+    # TODO: this is wrong, do something better
     @classmethod
     def truncdiv(cls, a, b):
         x = cls.truediv(a, b)
@@ -855,6 +874,7 @@ class ValueRangeAnalysis(SymPyValueRangeAnalysis):
 def bound_sympy(
     expr: sympy.Expr, ranges: Optional[Dict[sympy.Symbol, ValueRanges]] = None
 ) -> ValueRanges:
+    log.debug("bound_sympy(%s, %s)", expr, ranges)
     if isinstance(expr, sympy.Number):
         return ValueRanges.wrap(expr)
 

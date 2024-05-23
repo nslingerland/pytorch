@@ -16,15 +16,18 @@ from sympy.logic.boolalg import Boolean as SympyBoolean, BooleanAtom
 import torch
 from .functions import (
     CleanDiv,
+    FloatTrueDiv,
     FloorDiv,
+    IntTrueDiv,
     IsNonOverlappingAndDenseIndicator,
     Mod,
     ModularIndexing,
     Pow,
     Round,
     RoundDecimal,
-    TrueDiv,
-    Trunc,
+    ToFloat,
+    TruncToFloat,
+    TruncToInt,
     Where,
 )
 
@@ -49,10 +52,13 @@ def handlers():
         sympy.Le: "le",
         sympy.Ge: "ge",
         sympy.Not: "not_",
-        TrueDiv: "truediv",
+        IntTrueDiv: "int_truediv",
+        FloatTrueDiv: "truediv",
         FloorDiv: "floordiv",
         CleanDiv: "div",
-        Trunc: "trunc",
+        TruncToFloat: "trunc",
+        TruncToInt: "to_int",
+        ToFloat: "to_float",
         Where: "where",
         sympy.Add: "add",
         sympy.Mul: "mul",
@@ -72,7 +78,7 @@ def handlers():
         sympy.Piecewise: "piecewise",
         IsNonOverlappingAndDenseIndicator: "is_non_overlapping_and_dense_indicator",
         Round: "round",
-        RoundDecimal: "round",
+        RoundDecimal: "round",  # TODO: this is wrong
     }
     for name in ["cos", "sin", "tan", "sinh", "cosh", "tanh", "asin", "acos", "atan"]:
         HANDLERS[getattr(sympy, name)] = name
@@ -107,11 +113,11 @@ def sympy_interp(
         return analysis.sqrt(sympy_interp(analysis, env, expr.args[0]))
 
     # Recursive case
-    args = [sympy_interp(analysis, env, arg) for arg in expr.args]  # type: ignore[arg-type]
     if hasattr(expr.func, "_torch_handler_name"):
         handler_name = expr.func._torch_handler_name
     else:
         handler_name = handlers()[expr.func]
+    args = [sympy_interp(analysis, env, arg) for arg in expr.args]  # type: ignore[arg-type]
     handler = getattr(analysis, handler_name)
     if handler_name in ASSOCIATIVE_OPS:
         assert len(args) > 1

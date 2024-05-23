@@ -444,7 +444,11 @@ class PythonPrinter(ExprPrinter):
         assert len(expr.args) == 1
         return f"math.floor({self._print(expr.args[0])})"
 
-    def _print_Trunc(self, expr):
+    def _print_IntTrueDiv(self, expr):
+        lhs, rhs = expr.args
+        return f"{self._print(lhs)} / {self._print(rhs)}"
+
+    def _print_TruncToInt(self, expr):
         assert len(expr.args) == 1
         return f"math.trunc({self._print(expr.args[0])})"
 
@@ -572,6 +576,17 @@ class OpOverrides:
             ops.ne(ops.signbit(r), ops.signbit(b)),
         )
         return ops.where(cond, ops.add(r, b), r)
+
+    @staticmethod
+    def to_int(a):
+        return ops.to_dtype(ops.trunc(a), torch.int64)
+
+    @staticmethod
+    def int_truediv(a, b):
+        # TODO: this is wrong
+        # TODO: an easy bandaid is to generate runtime asserts that it's
+        # <= 2**53, which is when this equation is correct
+        return ops.truediv(a, b)
 
     @staticmethod
     def load_seed(name, offset):
