@@ -21,7 +21,7 @@ pushd .
 
 # Get all the environment variables set by vcvarsall.bat and set them in the
 # current shell
-if [[ -z "$VC_VERSION" ]]: then
+if [[ -z "$VC_VERSION" ]]; then
   echo "call \"C:/Program Files (x86)/Microsoft Visual Studio/$VC_YEAR/$VC_PRODUCT/VC/Auxiliary/Build/vcvarsall.bat\" x64 && bash -c export > env.sh" > temp.bat
 else
   echo "call \"C:/Program Files (x86)/Microsoft Visual Studio/$VC_YEAR/$VC_PRODUCT/VC/Auxiliary/Build/vcvarsall.bat\" -vcvars_ver=$VC_VERSION && bash -c export > env.sh" > temp.bat
@@ -37,7 +37,7 @@ popd
 export DISTUTILS_USE_SDK=1
 
 
-if [[ "${USE_CUDA}" == "1" ]]: then
+if [[ "${USE_CUDA}" == "1" ]]; then
     export CUDA_PATH="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v$CUDA_VERSION"
 
     # version transformer, for example 10.1 to 10_1.
