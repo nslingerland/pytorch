@@ -944,46 +944,92 @@ def _log_export_wrapper(fn):
     return wrapper
 
 
-def _convert_ts_to_export_experimental(traced_callable, args, kwargs=None):
+def _process_jit_trace_inputs_for_export(example_inputs, example_kwarg_inputs):
+    if not isinstance(example_inputs, (tuple, list, dict)):
+        example_inputs = (example_inputs,)
+
+    if isinstance(example_inputs, list):
+        example_inputs = tuple(example_inputs)
+
+    if (
+        isinstance(example_inputs, (torch.Tensor, dict))
+        and example_kwarg_inputs is None
+    ):
+        example_inputs = (example_inputs,)
+
+    if example_kwarg_inputs is None:
+        example_kwarg_inputs = {}
+    return example_inputs, example_kwarg_inputs
+
+
+@contextmanager
+def patch_forward(obj: torch.nn.Module, new_method):
+    """Helper method to make it easier to cleanly torch.export() a method on a
+    module that is not `forward`.
+    """
+    # Save the original method
+    original_method = obj.forward
+
+    # Patch the method
+    obj.forward = new_method.__get__(obj, obj.__class__)
+
+    try:
+        yield
+    finally:
+        # Restore the original method
+        obj.forward = original_method
+
+
+@contextmanager
+def _temp_disable_texpr_fuser():
+    original_state = torch._C._jit_texpr_fuser_enabled()
     torch._C._jit_set_texpr_fuser_enabled(False)
+    try:
+        yield
+    finally:
+        torch._C._jit_set_texpr_fuser_enabled(original_state)
 
-    def process_trace_inputs_for_export(example_inputs, example_kwarg_inputs):
-        if not isinstance(example_inputs, tuple):
-            example_inputs = (example_inputs,)
 
-        if example_kwarg_inputs is None:
-            example_kwarg_inputs = {}
-        return example_inputs, example_kwarg_inputs
+def _convert_ts_to_export_experimental(traced_callable, args, kwargs=None):
+    with _temp_disable_texpr_fuser():
+        class _WrapperModule(torch.nn.Module):
+            def __init__(self, f):
+                super().__init__()
+                self.f = f
 
-    class _WrapperModule(torch.nn.Module):
-        def __init__(self, f):
-            super().__init__()
-            self.f = f
+            def forward(self, *args, **kwargs):
+                return self.f(*args, **kwargs)
 
-        def forward(self, *args, **kwargs):
-            return self.f(*args, **kwargs)
+        from torch.jit._trace import TopLevelTracedModule
 
-    from torch.jit._trace import TopLevelTracedModule
+        export_args, export_kwargs = _process_jit_trace_inputs_for_export(args, kwargs)
 
-    export_args, export_kwargs = process_trace_inputs_for_export(args, kwargs)
+        if isinstance(traced_callable, (TopLevelTracedModule, torch._C.ScriptModule)):
+            return _export(
+                traced_callable,
+                export_args,
+                export_kwargs,
+                strict=False,
+                _is_torch_jit_trace=True,
+            ).module()
 
-    if isinstance(traced_callable, TopLevelTracedModule):
-        return _export(
-            traced_callable,
-            export_args,
-            export_kwargs,
-            strict=False,
-            _is_torch_jit_trace=True,
-        ).module()
-
-    else:
-        return _export(
-            _WrapperModule(traced_callable),
-            export_args,
-            export_kwargs,
-            strict=False,
-            _is_torch_jit_trace=True,
-        ).module()
+        elif isinstance(traced_func, torch.ScriptMethod) and isinstance(traced_func.owner(), (torch._C.ScriptModule, torch.nn.Module)):
+            with patch_forward(traced_func.owner(), traced_func):
+                return _export(
+                    traced_func.owner(),
+                    export_args,
+                    export_kwargs,
+                    strict=False,
+                    _is_torch_jit_trace=True,
+                ).module()
+        else:
+            return _export(
+                _WrapperModule(traced_callable),
+                export_args,
+                export_kwargs,
+                strict=False,
+                _is_torch_jit_trace=True,
+            ).module()
 
 
 def _strict_export(
