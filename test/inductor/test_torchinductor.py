@@ -720,6 +720,24 @@ class SweepInputs2:
                 cls.gen_template(name1, name2)
 
 
+def is_cpp_backend(device):
+    return getattr(device, "type", device) == "cpu" and config.cpu_backend == "cpp"
+
+
+def is_halide_backend(device):
+    return getattr(device, "type", device) == "cpu" and config.cpu_backend == "halide"
+
+
+def skip_if_halide(fn):
+    @functools.wraps(fn)
+    def wrapper(self):
+        if is_halide_backend(self.device):
+            raise unittest.SkipTest("halide not supported")
+        return fn(self)
+
+    return wrapper
+
+
 @instantiate_parametrized_tests
 class CommonTemplate:
     def test_bool(self):
@@ -745,6 +763,7 @@ class CommonTemplate:
         )
 
     @skipCUDAIf(not SM80OrLater, "Requires sm80")
+    @skip_if_halide  # aoti
     def test_eager_aoti_cache_hit(self):
         ns = "aten"
         op_name = "abs"
@@ -797,6 +816,7 @@ class CommonTemplate:
                 self.assertEqual(ref_value, res_value)
 
     @skipCUDAIf(not SM80OrLater, "Requires sm80")
+    @skip_if_halide  # aoti
     def test_aoti_compile_with_persistent_cache(self):
         def fn(a):
             return torch.abs(a)
@@ -841,6 +861,7 @@ class CommonTemplate:
         self.assertTrue(kernel_lib_path in kernel_libs_abs_path)
 
     @skipCUDAIf(not SM80OrLater, "Requires sm80")
+    @skip_if_halide  # aoti
     def test_eager_aoti_with_scalar(self):
         namespace_name = "aten"
         op_name = "add"
@@ -1850,6 +1871,7 @@ class CommonTemplate:
         self.common(fn, (torch.randn(4, 4), torch.randn(4, 4)))
 
     @skipCUDAIf(not SM80OrLater, "Requires sm80")
+    @skip_if_halide  # bf16
     def test_dist_bf16(self):
         def fn(a, b):
             return torch.dist(a.to(torch.bfloat16), b.to(torch.bfloat16))
@@ -2994,6 +3016,7 @@ class CommonTemplate:
                         (v,),
                     )
 
+    @skip_if_halide  # https://github.com/halide/Halide/issues/8227
     def test_conv_functional_bn_fuse(self):
         # For gpu path, there is an accuracy issue
         if self.device == GPU_TYPE:
@@ -3789,6 +3812,8 @@ class CommonTemplate:
 
         mod = Model().to(self.device)
         for dtype in [torch.half, torch.bfloat16]:
+            if dtype == torch.bfloat16 and is_halide_backend(self.device):
+                continue
             x = torch.randn(4, 3, 7, 7, device=self.device).to(dtype=dtype)
             opt_mod = torch.compile(mod)
             res = opt_mod(x)
@@ -6545,6 +6570,7 @@ class CommonTemplate:
             ],
         )
 
+    @skip_if_halide  # rng
     def test_bernoulli2(self):
         def fn(a):
             return aten.bernoulli(a)
@@ -7797,6 +7823,7 @@ class CommonTemplate:
         self.assertTrue(same(g2, g3))
 
     @config.patch(search_autotune_cache=False)
+    @skip_if_halide  # rand
     def test_dropout3(self):
         m = torch.nn.Sequential(
             torch.nn.Linear(32, 32, bias=False),
@@ -9062,6 +9089,7 @@ class CommonTemplate:
             self.common(fn, (torch.ones(1, 1, 13, dtype=dtype),))
 
     @unittest.skipIf(not HAS_CPU, "requires C++ compiler")
+    @skip_if_halide  # bf16
     def test_data_type_propogation(self):
         from torch._dynamo.utils import detect_fake_mode
         from torch._inductor.codegen.common import boolean_ops
@@ -9211,7 +9239,7 @@ class CommonTemplate:
         args = [rand_strided(sh, st) for (sh, st) in args]
         args.append(256)
 
-        if self.device == "cpu":
+        if is_cpp_backend(self.device):
             opt_fn = torch._dynamo.optimize("inductor")(fn)
             _, code = run_and_get_cpp_code(opt_fn, *args)
             print(code)
@@ -9986,6 +10014,7 @@ class CommonTemplate:
         self.assertEqual(ref, actual)
 
     @skipCUDAIf(not SM80OrLater, "uses bfloat16 which requires SM >= 80")
+    @skip_if_halide  # bf16
     def test_bfloat16_to_int16(self):
         def fn(a, b):
             x = a + b
@@ -10999,6 +11028,7 @@ if HAS_GPU and not TEST_WITH_ASAN:
             torch.cuda.is_available() and torch.cuda.get_device_capability() < (9, 0),
             "Triton does not support fp8 on A100",
         )
+        @skip_if_halide  # bf16
         def test_red_followed_by_transposed_pointwise(self):
             bs = 26624
             dim = 1024
