@@ -18,7 +18,7 @@ fi
 
 echo Copying over additional ci files
 
-cp -r "$PYTORCH_FINAL_PACKAGE_DIR"/.additional_ci_files "$PROJECT_DIR"/.additional_ci_files
+cp -r "$PYTORCH_FINAL_PACKAGE_DIR"/.additional_ci_files "$PROJECT_DIR"
 
 time python run_test.py --exclude-jit-executor --exclude-distributed-tests --shard "$SHARD_NUMBER" "$NUM_TEST_SHARDS" --verbose
 popd
