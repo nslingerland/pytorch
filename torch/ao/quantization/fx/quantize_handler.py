@@ -1,6 +1,5 @@
 from abc import ABC
 from typing import Callable, Dict, List, Optional, Type
-from typing_extensions import deprecated  # Python 3.13+
 
 import torch
 
@@ -145,7 +144,6 @@ def _get_pattern_to_quantize_handlers(backend_config: BackendConfig) -> Dict[Pat
 
 # TODO: remove this class, this is still exposed in torch.ao.quantization
 # but we should be able to break bc
-@deprecated("removed")
 class BinaryOpQuantizeHandler(QuantizeHandler):
     pass
 
@@ -153,22 +151,18 @@ class CatQuantizeHandler(QuantizeHandler):
     pass
 
 # TODO: remove this class
-@deprecated("removed")
 class ConvReluQuantizeHandler(QuantizeHandler):
     pass
 
 # TODO: remove this class
-@deprecated("removed")
 class LinearReLUQuantizeHandler(QuantizeHandler):
     pass
 
 # TODO: remove this class
-@deprecated("removed")
 class BatchNormQuantizeHandler(QuantizeHandler):
     pass
 
 # TODO: remove this class
-@deprecated("removed")
 class EmbeddingQuantizeHandler(QuantizeHandler):
     pass
 
@@ -177,33 +171,27 @@ class RNNDynamicQuantizeHandler(QuantizeHandler):
     pass
 
 # TODO: remove this class
-@deprecated("removed")
 class DefaultNodeQuantizeHandler(QuantizeHandler):
     """ Common quantized op, first input and first output will be quantized
     """
     pass
 
 # TODO: remove this class
-@deprecated("removed")
 class FixedQParamsOpQuantizeHandler(QuantizeHandler):
     pass
 
 # TODO: remove
-@deprecated("removed")
 class CopyNodeQuantizeHandler(QuantizeHandler):
     pass
 
 # TODO: remove
-@deprecated("removed")
 class GeneralTensorShapeOpQuantizeHandler(QuantizeHandler):
     pass
 
 # TODO: not used, can be removed after torch.ao.quantization namespace is deprecated
-@deprecated("removed")
 class CustomModuleQuantizeHandler(QuantizeHandler):
     pass
 
 # TODO: not used, can be removed after torch.ao.quantization namespace is deprecated
-@deprecated("removed")
 class StandaloneModuleQuantizeHandler(QuantizeHandler):
     pass
