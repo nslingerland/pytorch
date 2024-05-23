@@ -42,7 +42,7 @@ def legacy_get_string(size_average: Optional[bool], reduce: Optional[bool], emit
     else:
         ret = 'none'
     if emit_warning:
-        warnings.warn(warning.format(ret))
+        warnings.warn(warning.format(ret), DeprecationWarning)
     return ret
 
 
